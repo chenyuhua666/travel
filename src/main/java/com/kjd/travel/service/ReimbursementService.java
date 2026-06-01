@@ -127,14 +127,15 @@ public class ReimbursementService {
     @Transactional
     public ReimbursementDetailVO saveDraft(Long id, ReimbursementDraftSaveDTO dto, CurrentUser user) {
         ReimbursementEntity main = id == null ? newDraft(user) : requireEditable(id, user);
+        ensureFreshVersion(main, dto);
         fillMain(main, dto);
         main.setUpdateTime(LocalDateTime.now());
         if (main.getId() == null) {
             reimbursementMapper.insert(main);
             main.setReimNo("SY" + String.format("%010d", main.getId()));
-            reimbursementMapper.updateById(main);
+            updateMainWithLock(main);
         } else {
-            reimbursementMapper.updateById(main);
+            updateMainWithLock(main);
         }
         replaceChildren(main, dto);
         return buildDetail(reimbursementMapper.selectById(main.getId()));
@@ -146,7 +147,7 @@ public class ReimbursementService {
         validateForSubmit(main);
         main.setStatus(ReimbursementStatus.APPROVING.getCode());
         main.setUpdateTime(LocalDateTime.now());
-        reimbursementMapper.updateById(main);
+        updateMainWithLock(main);
         return toActionVO(main);
     }
 
@@ -158,7 +159,7 @@ public class ReimbursementService {
         }
         main.setStatus(ReimbursementStatus.DRAFT.getCode());
         main.setUpdateTime(LocalDateTime.now());
-        reimbursementMapper.updateById(main);
+        updateMainWithLock(main);
         return toActionVO(main);
     }
 
@@ -170,7 +171,7 @@ public class ReimbursementService {
         }
         main.setStatus(ReimbursementStatus.APPROVED.getCode());
         main.setUpdateTime(LocalDateTime.now());
-        reimbursementMapper.updateById(main);
+        updateMainWithLock(main);
         return toActionVO(main);
     }
 
@@ -182,7 +183,7 @@ public class ReimbursementService {
         }
         main.setStatus(ReimbursementStatus.VOIDED.getCode());
         main.setUpdateTime(LocalDateTime.now());
-        reimbursementMapper.updateById(main);
+        updateMainWithLock(main);
         return toActionVO(main);
     }
 
@@ -204,7 +205,7 @@ public class ReimbursementService {
                 .toList();
         ReimbursementDraftSaveDTO dto = new ReimbursementDraftSaveDTO(source.reimbursementTitle(),
                 source.reimburserId(), source.reimDepartmentId(), source.reimCompanyId(), source.businessTypeId(),
-                source.businessTripReason(), source.remarks(), trips, allocations);
+                source.businessTripReason(), source.remarks(), null, trips, allocations);
         return createDraft(dto, user);
     }
 
@@ -221,6 +222,7 @@ public class ReimbursementService {
         ReimbursementEntity entity = new ReimbursementEntity();
         entity.setOwnerUserId(user.userId());
         entity.setStatus(ReimbursementStatus.DRAFT.getCode());
+        entity.setVersion(0);
         entity.setCreationTime(LocalDateTime.now());
         entity.setUpdateTime(LocalDateTime.now());
         setMainTotals(entity, ZERO, ZERO, ZERO, ZERO);
@@ -302,7 +304,7 @@ public class ReimbursementService {
         saveAllocations(main.getId(), safe(dto.allocations()));
         setMainTotals(main, summary.subsidyTotal, summary.mealTotal, summary.transportationTotal, summary.phoneTotal);
         main.setUpdateTime(LocalDateTime.now());
-        reimbursementMapper.updateById(main);
+        updateMainWithLock(main);
     }
 
     private void deleteChildren(Long mainId) {
@@ -553,8 +555,8 @@ public class ReimbursementService {
                 main.getReimCompanyId(), main.getReimCompanyNo(), main.getReimCompanyName(),
                 main.getBusinessTypeId(), main.getBusinessTypeNo(), main.getBusinessTypeName(),
                 main.getBusinessTripReason(), main.getSubsidyTotal(), main.getMealAllowance(),
-                main.getTransportationAllowance(), main.getPhoneAllowance(), main.getRemarks(), main.getCreationTime(),
-                main.getUpdateTime(), tripVOs, allocationVOs);
+                main.getTransportationAllowance(), main.getPhoneAllowance(), main.getRemarks(), main.getVersion(),
+                main.getCreationTime(), main.getUpdateTime(), tripVOs, allocationVOs);
     }
 
     private TripVO toTripVO(TripEntity trip, SubsidyEntity subsidy, Map<Long, List<SubsidyDayEntity>> daysBySubsidyId) {
@@ -630,6 +632,21 @@ public class ReimbursementService {
             throw new BusinessException(404, "报销单不存在");
         }
         return entity;
+    }
+
+    private void ensureFreshVersion(ReimbursementEntity main, ReimbursementDraftSaveDTO dto) {
+        if (main.getId() == null) {
+            return;
+        }
+        if (dto.version() == null || !Objects.equals(main.getVersion(), dto.version())) {
+            throw new BusinessException(409, "报销单已被他人修改，请刷新后重试");
+        }
+    }
+
+    private void updateMainWithLock(ReimbursementEntity main) {
+        if (reimbursementMapper.updateById(main) != 1) {
+            throw new BusinessException(409, "报销单已被他人修改，请刷新后重试");
+        }
     }
 
     private EmployeeEntity requireEmployee(Long id) {

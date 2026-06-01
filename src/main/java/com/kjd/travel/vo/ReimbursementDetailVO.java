@@ -28,6 +28,7 @@ public record ReimbursementDetailVO(
         BigDecimal transportationAllowance,
         BigDecimal phoneAllowance,
         String remarks,
+        Integer version,
         LocalDateTime creationTime,
         LocalDateTime updateTime,
         List<TripVO> trips,

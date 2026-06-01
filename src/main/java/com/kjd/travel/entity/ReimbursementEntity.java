@@ -3,6 +3,7 @@ package com.kjd.travel.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -36,6 +37,8 @@ public class ReimbursementEntity {
     private String remarks;
     private Integer status;
     private Long ownerUserId;
+    @Version
+    private Integer version;
     private LocalDateTime creationTime;
     private LocalDateTime updateTime;
 }

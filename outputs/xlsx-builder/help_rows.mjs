@@ -1,0 +1,3 @@
+import { Workbook } from "@oai/artifact-tool";
+const workbook = Workbook.create();
+console.log(workbook.help("*", { search: "hidden|hide|rowHeight|row", include: "index,examples,notes", maxChars: 6000 }).ndjson);

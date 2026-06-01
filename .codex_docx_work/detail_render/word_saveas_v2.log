@@ -1,0 +1,9 @@
+21:22:32 create
+21:22:34 created
+21:22:34 open-start
+21:22:34 open-done
+21:22:34 saveas-start
+21:22:34 ERR Exception setting "SaveAs2": Cannot convert the "E:\codelocation\IDEA\travel\.codex_docx_work\detail_render\detail_final_check_v2_saveas.pdf" value of type "psobject" to type "Object".
+21:22:34 finally
+21:22:34 doc-close
+21:22:34 quit

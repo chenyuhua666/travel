@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS fk_reim_main (
     remarks VARCHAR(1000) NULL,
     status TINYINT NOT NULL DEFAULT 0,
     owner_user_id BIGINT NOT NULL,
+    version INT NOT NULL DEFAULT 0,
     creation_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_fk_reim_main_no (reim_no),
